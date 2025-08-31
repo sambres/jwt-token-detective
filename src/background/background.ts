@@ -48,7 +48,7 @@ class JWTDetectorBackground {
         url: details.url,
         method: details.method,
         abbreviatedPath: JWTUtils.getAbbreviatedPath(details.url),
-        timestamp: new Date(),
+        timestamp: new Date().getTime(),
       };
 
       await this.storeTokenData(bearerToken, requestInfo);
@@ -72,6 +72,7 @@ class JWTDetectorBackground {
         tokenId,
         url: requestInfo.url,
         method: requestInfo.method,
+        timeStamp: requestInfo.timestamp,
         existingGroups: storage.tokenGroups.length,
       });
 
@@ -108,7 +109,7 @@ class JWTDetectorBackground {
         // Keep only recent requests (last 50 per token)
         if (existingGroup.requests.length > 50) {
           existingGroup.requests = existingGroup.requests
-            .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+            .sort((a, b) => b.timestamp - a.timestamp)
             .slice(0, 50);
         }
       } else {
@@ -117,7 +118,7 @@ class JWTDetectorBackground {
         if (newGroup) {
           console.log("Created new token group:", {
             tokenId: newGroup.tokenId,
-            expiryDate: newGroup.expiryDate?.toISOString(),
+            expiryDate: newGroup.expiryDate,
             isExpired: newGroup.isExpired,
           });
 
@@ -159,23 +160,7 @@ class JWTDetectorBackground {
         (result) => {
           const data = result[JWTDetectorBackground.STORAGE_KEY];
           if (data) {
-            // Convert timestamp strings back to Date objects
-            const parsedData: ExtensionStorage = {
-              ...data,
-              tokenGroups: data.tokenGroups.map((group: any) => ({
-                ...group,
-                expiryDate: group.expiryDate
-                  ? new Date(group.expiryDate)
-                  : null,
-                firstSeen: new Date(group.firstSeen),
-                lastSeen: new Date(group.lastSeen),
-                requests: group.requests.map((req: any) => ({
-                  ...req,
-                  timestamp: new Date(req.timestamp),
-                })),
-              })),
-            };
-            resolve(parsedData);
+            resolve(data);
           } else {
             resolve({
               tokenGroups: [],
@@ -241,7 +226,7 @@ class JWTDetectorBackground {
             isExpired: JWTUtils.isTokenExpired(group.payload),
             // Remove old requests within each group
             requests: group.requests.filter(
-              (req) => req.timestamp.getTime() > cutoffTime
+              (req) => req.timestamp > cutoffTime
             ),
           };
 
@@ -255,20 +240,7 @@ class JWTDetectorBackground {
           try {
             // Check using expiryDate if available
             if (group.expiryDate) {
-              if (
-                group.expiryDate instanceof Date &&
-                !isNaN(group.expiryDate.getTime())
-              ) {
-                expiryTime = group.expiryDate.getTime();
-              } else if (
-                typeof group.expiryDate === "string" ||
-                typeof group.expiryDate === "number"
-              ) {
-                const parsedDate = new Date(group.expiryDate);
-                if (!isNaN(parsedDate.getTime())) {
-                  expiryTime = parsedDate.getTime();
-                }
-              }
+              expiryTime = group.expiryDate;
             }
 
             // Fallback: check using payload.exp

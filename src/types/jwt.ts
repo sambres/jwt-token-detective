@@ -21,7 +21,7 @@ export interface RequestInfo {
   url: string;
   method: string;
   abbreviatedPath: string;
-  timestamp: Date;
+  timestamp: number;
 }
 
 export interface JWTTokenGroup {
@@ -30,11 +30,11 @@ export interface JWTTokenGroup {
   header: JWTHeader;
   payload: JWTPayload;
   signature: string;
-  expiryDate: Date | null;
+  expiryDate: number | null;
   isExpired: boolean;
   requests: RequestInfo[];
-  firstSeen: Date;
-  lastSeen: Date;
+  firstSeen: number;
+  lastSeen: number;
   isValid: boolean;
   parseError?: string;
   domain: string;

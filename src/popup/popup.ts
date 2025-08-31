@@ -68,12 +68,10 @@ export class JWTPopup {
             const parsedData = {
               ...data,
               tokenGroups: data.tokenGroups.map((group) => {
-                const parsedExpiryDate = this.parseDate(group.expiryDate);
-
                 // Simple expiry check: if we have a valid expiry date, check if it's past
                 let isExpired = group.isExpired; // Default to stored value
-                if (parsedExpiryDate instanceof Date) {
-                  isExpired = parsedExpiryDate.getTime() < Date.now();
+                if (group.expiryDate) {
+                  isExpired = group.expiryDate < Date.now();
                 } else if (
                   group.payload &&
                   typeof group.payload.exp === "number"
@@ -84,22 +82,12 @@ export class JWTPopup {
 
                 return {
                   ...group,
-                  expiryDate: parsedExpiryDate,
+                  expiryDate: group.expiryDate,
                   isExpired,
-                  firstSeen: this.parseDate(group.firstSeen) || new Date(),
-                  lastSeen: this.parseDate(group.lastSeen) || new Date(),
+                  firstSeen: group.firstSeen,
+                  lastSeen: group.lastSeen,
                   requests: Array.isArray(group.requests)
-                    ? group.requests
-                        .map((req) => ({
-                          ...req,
-                          timestamp:
-                            this.parseDate(req.timestamp) || new Date(),
-                        }))
-                        .filter((req) => req && req.timestamp instanceof Date)
-                        .sort(
-                          (a, b) =>
-                            b.timestamp.getTime() - a.timestamp.getTime()
-                        )
+                    ? group.requests.sort((a, b) => b.timestamp - a.timestamp)
                     : [],
                 };
               }),
@@ -115,26 +103,6 @@ export class JWTPopup {
         }
       });
     });
-  }
-
-  parseDate(dateValue: Date | string | null) {
-    if (!dateValue) {
-      return null;
-    }
-
-    // If already a Date object, validate and return it
-    if (dateValue instanceof Date) {
-      return isNaN(dateValue.getTime()) ? null : dateValue;
-    }
-
-    // Try to parse string/number to Date
-    try {
-      const parsed = new Date(dateValue);
-      return isNaN(parsed.getTime()) ? null : parsed;
-    } catch (error) {
-      console.error("Failed to parse date:", dateValue, error);
-      return null;
-    }
   }
 
   renderTokens(tokenGroups: JWTTokenGroup[], allTokenGroups: JWTTokenGroup[]) {
@@ -160,9 +128,7 @@ export class JWTPopup {
 
     const fragment = document.createDocumentFragment();
     // Sort by last seen (most recent first)
-    const sortedGroups = tokenGroups.sort(
-      (a, b) => new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime()
-    );
+    const sortedGroups = tokenGroups.sort((a, b) => b.lastSeen - a.lastSeen);
 
     sortedGroups.forEach((group) => {
       const tokenElement = this.createTokenElement(group);
@@ -202,10 +168,7 @@ export class JWTPopup {
     let expiryText = "No expiry";
 
     // First try to use the parsed expiryDate
-    if (
-      group.expiryDate instanceof Date &&
-      !isNaN(group.expiryDate.getTime())
-    ) {
+    if (group.expiryDate && !isNaN(group.expiryDate)) {
       expiryText = this.formatDate(group.expiryDate);
     }
     // Fallback: try to calculate from payload.exp

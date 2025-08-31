@@ -40,7 +40,7 @@ export class JWTUtils {
   /**
    * Get expiry date from JWT payload
    */
-  static getExpiryDate(payload: JWTPayload): Date | null {
+  static getExpiryDate(payload: JWTPayload): number | null {
     if (!payload || typeof payload.exp !== "number") {
       console.log("No exp claim found or invalid:", payload?.exp);
       return null;
@@ -61,7 +61,7 @@ export class JWTUtils {
       "from exp:",
       payload.exp
     );
-    return expiryDate;
+    return expiryDate.getTime();
   }
 
   /**
@@ -75,9 +75,9 @@ export class JWTUtils {
     }
 
     const now = Date.now();
-    const isExpired = expiryDate.getTime() < now;
+    const isExpired = expiryDate < now;
     console.log("Token expiry check:", {
-      expiryDate: expiryDate.toISOString(),
+      expiryDate: expiryDate,
       now: new Date(now).toISOString(),
       isExpired,
     });
