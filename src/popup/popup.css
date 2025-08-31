@@ -69,9 +69,14 @@ body {
 
 .token-id {
   font-family: "Monaco", "Menlo", monospace;
-  font-size: 12px;
+  font-size: 10px;
   color: #6b7280;
   margin-bottom: 4px;
+}
+
+.token-title {
+  font-weight: 400;
+  margin-bottom: 6px;
 }
 
 .token-status {

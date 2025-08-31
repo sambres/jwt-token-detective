@@ -231,7 +231,8 @@ export class JWTPopup {
     element.innerHTML = `
       <div class="token-header" data-token-id="${tokenId}">
         <div class="token-info">
-          <div class="token-id">${title}</div>
+          <div class="token-id">ID: ${tokenId}</div>
+          <div class="token-title">${title}</div>
           <div class="token-status">
             <span class="status-badge ${statusClass}">${statusText}</span>
             <span class="expiry-date">Expires: ${expiryText}</span>
