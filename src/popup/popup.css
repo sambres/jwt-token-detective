@@ -254,7 +254,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .settings-header h2 {
@@ -274,6 +274,10 @@ body {
 
 .settings-content .form-group {
   margin-bottom: 16px;
+}
+
+.settings-content .form-group.domain-filter {
+  margin-bottom: 8px;
 }
 
 .settings-content label {
@@ -306,7 +310,7 @@ body {
 }
 
 #filter-list {
-  margin-top: 16px;
+  margin-top: 8px;
 }
 
 .filter-item {
@@ -323,6 +327,13 @@ body {
 
 .filter-item:last-child {
   margin-bottom: 0;
+}
+
+.no-filters-label {
+  text-align: center;
+  font-size: 12px;
+  padding: 8px;
+  color: #6b7280;
 }
 
 .remove-filter-btn {

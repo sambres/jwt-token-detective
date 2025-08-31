@@ -67,9 +67,12 @@ export class SettingsManager {
 
   private async clearTokens(): Promise<void> {
     return new Promise((resolve) => {
-      chrome.storage.local.set({ jwt_detector_data: { tokenGroups: [] } }, () => {
-        resolve();
-      });
+      chrome.storage.local.set(
+        { jwt_detector_data: { tokenGroups: [] } },
+        () => {
+          resolve();
+        }
+      );
     });
   }
 
@@ -110,7 +113,7 @@ export class SettingsManager {
     this.filterList.innerHTML = "";
 
     if (this.settings.domainFilters.length === 0) {
-      this.filterList.innerHTML = `<div style="text-align: center; padding: 8px; color: #6b7280;">No filters added.</div>`;
+      this.filterList.innerHTML = `<div class="no-filters-label" >No filters added.</div>`;
       return;
     }
 
@@ -150,7 +153,8 @@ export class SettingsManager {
         }
         // Update UI elements to reflect loaded settings
         if (this.groupTokensByDomainCheckbox) {
-          this.groupTokensByDomainCheckbox.checked = this.settings.groupByDomain;
+          this.groupTokensByDomainCheckbox.checked =
+            this.settings.groupByDomain;
         }
         resolve();
       });

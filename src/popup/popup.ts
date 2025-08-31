@@ -156,81 +156,17 @@ export class JWTPopup {
     }
 
     const fragment = document.createDocumentFragment();
-
-    if (this.settingsManager.settings.groupByDomain) {
-      const groupedByDomain = tokenGroups.reduce((acc, group) => {
-        const domain = this.getDomain(group) || "Unknown";
-        if (!acc[domain]) {
-          acc[domain] = [];
-        }
-        acc[domain].push(group);
-        return acc;
-      }, {} as Record<string, JWTTokenGroup[]>);
-
-      const sortedDomains = Object.keys(groupedByDomain).sort();
-
-      sortedDomains.forEach((domain) => {
-        const groupContainer = this.createDomainGroupElement(
-          domain,
-          groupedByDomain[domain]
-        );
-        fragment.appendChild(groupContainer);
-      });
-    } else {
-      const sortedGroups = tokenGroups.sort(
-        (a, b) =>
-          new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime()
-      );
-
-      sortedGroups.forEach((group) => {
-        const tokenElement = this.createTokenElement(group);
-        fragment.appendChild(tokenElement);
-      });
-    }
-
-    this.tokensContainer.appendChild(fragment);
-    this.updateStats(tokenGroups, allTokenGroups);
-  }
-
-  createDomainGroupElement(
-    domain: string,
-    groups: JWTTokenGroup[]
-  ): HTMLElement {
-    const element = document.createElement("div");
-    element.className = "domain-group";
-
-    const sortedGroups = groups.sort(
+    const sortedGroups = tokenGroups.sort(
       (a, b) => new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime()
     );
 
-    element.innerHTML = `
-      <div class="domain-header">
-        <div class="domain-name">${domain}</div>
-        <div class="domain-token-count">${groups.length} token(s)</div>
-        <button class="toggle-btn">▼</button>
-      </div>
-      <div class="token-list-container">
-        ${sortedGroups
-          .map((g) => this.createTokenElement(g).outerHTML)
-          .join("")}
-      </div>
-    `;
-
-    const header = element.querySelector(".domain-header");
-    header?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const isExpanded = element.classList.toggle("expanded");
-      const toggleBtn = element.querySelector(".toggle-btn");
-      if (toggleBtn) {
-        toggleBtn.textContent = isExpanded ? "▲" : "▼";
-      }
+    sortedGroups.forEach((group) => {
+      const tokenElement = this.createTokenElement(group);
+      fragment.appendChild(tokenElement);
     });
 
-    element.querySelectorAll(".token-group").forEach((tokenEl, index) => {
-      this.setupTokenEvents(tokenEl as HTMLElement, sortedGroups[index]);
-    });
-
-    return element;
+    this.tokensContainer.appendChild(fragment);
+    this.updateStats(tokenGroups, allTokenGroups);
   }
 
   getDomain(group: JWTTokenGroup): string {
@@ -269,8 +205,8 @@ export class JWTPopup {
     element.innerHTML = `
       <div class="token-header" data-token-id="${tokenId}">
         <div class="token-info">
-          <div class="token-id">${title}</div>
-          <div class="token-id-secondary">${tokenId}</div>
+        <div class="token-id">${tokenId}</div>
+        <div class="token-title">${title}</div>
           <div class="token-status">
             <span class="status-badge ${statusClass}">${statusText}</span>
             <span class="expiry-date">Expires: ${expiryText}</span>
@@ -288,10 +224,7 @@ export class JWTPopup {
       </div>
     `;
 
-    if (!element.closest(".domain-group")) {
-      this.setupTokenEvents(element, group);
-    }
-
+    this.setupTokenEvents(element, group);
     return element;
   }
 

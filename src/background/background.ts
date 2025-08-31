@@ -1,11 +1,12 @@
 import { JWTUtils } from "@/utils/jwt";
-import { ExtensionStorage, JWTTokenGroup, RequestInfo } from "@/types/jwt";
+import { ExtensionStorage, RequestInfo, Settings } from "@/types/jwt";
 
 class JWTDetectorBackground {
   private static readonly STORAGE_KEY = "jwt_detector_data";
+  private static readonly SETTINGS_KEY = "jwt_settings";
   private static readonly MAX_TOKEN_GROUPS = 100;
   private static readonly RETENTION_HOURS = 2;
-  private static readonly CLEAN_UP_INTERVAL_MINUTES = 15; // 15 minutes
+  private static readonly CLEAN_UP_INTERVAL_MINUTES = 15;
 
   constructor() {
     this.setupWebRequestListener();
@@ -66,7 +67,9 @@ class JWTDetectorBackground {
   ): Promise<void> {
     try {
       const storage = await this.getStorage();
+      const settings = await this.getSettings();
       const tokenId = await JWTUtils.generateTokenId(token);
+      const domain = JWTUtils.getDomainFromUrl(requestInfo.url) || "Unknown";
 
       console.log("Storing token data:", {
         tokenId,
@@ -77,9 +80,16 @@ class JWTDetectorBackground {
       });
 
       // Find existing token group
-      const existingGroupIndex = storage.tokenGroups.findIndex(
-        (group) => group.tokenId === tokenId
-      );
+      let existingGroupIndex = -1;
+      if (settings.groupByDomain) {
+        existingGroupIndex = storage.tokenGroups.findIndex(
+          (group) => group.domain === domain
+        );
+      } else {
+        existingGroupIndex = storage.tokenGroups.findIndex(
+          (group) => group.tokenId === tokenId
+        );
+      }
 
       console.log(
         "Looking for existing group with tokenId:",
@@ -93,17 +103,25 @@ class JWTDetectorBackground {
         const existingGroup = storage.tokenGroups[existingGroupIndex];
         existingGroup.requests.push(requestInfo);
         existingGroup.lastSeen = requestInfo.timestamp;
-        existingGroup.domain = JWTUtils.getDomainFromUrl(requestInfo.url);
 
-        console.log("Updated existing group:", {
-          tokenId,
-          requestCount: existingGroup.requests.length,
-        });
-
-        // Recalculate expiry status in case time has passed
-        const parsed = JWTUtils.parseJWT(token);
-        if (parsed) {
-          existingGroup.isExpired = JWTUtils.isTokenExpired(parsed.payload);
+        // If grouping by domain, update the token data to the latest one seen
+        if (settings.groupByDomain) {
+          const parsed = JWTUtils.parseJWT(token);
+          if (parsed) {
+            existingGroup.raw = token;
+            existingGroup.header = parsed.header;
+            existingGroup.payload = parsed.payload;
+            existingGroup.tokenId = tokenId; // Update to the latest token ID
+            existingGroup.isExpired = JWTUtils.isTokenExpired(parsed.payload);
+            existingGroup.expiryDate = parsed.payload.exp
+              ? parsed.payload.exp * 1000
+              : null;
+          }
+        } else {
+          const parsed = JWTUtils.parseJWT(token);
+          if (parsed) {
+            existingGroup.isExpired = JWTUtils.isTokenExpired(parsed.payload);
+          }
         }
 
         // Keep only recent requests (last 50 per token)
@@ -148,6 +166,22 @@ class JWTDetectorBackground {
     } catch (error) {
       console.error("Error storing token data:", error);
     }
+  }
+
+  private async getSettings(): Promise<Settings> {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(
+        [JWTDetectorBackground.SETTINGS_KEY],
+        (result) => {
+          const settings = result[JWTDetectorBackground.SETTINGS_KEY];
+          if (settings) {
+            resolve(settings);
+          } else {
+            resolve({ groupByDomain: false, domainFilters: [] });
+          }
+        }
+      );
+    });
   }
 
   /**
