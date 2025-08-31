@@ -1,3 +1,5 @@
+import { Settings } from "../types/jwt";
+
 export class SettingsManager {
   private settingsPage: HTMLElement | null;
   private mainPage: HTMLElement | null;
@@ -6,12 +8,16 @@ export class SettingsManager {
   private domainFilterInput: HTMLInputElement | null;
   private regexError: HTMLElement | null;
   private filterList: HTMLElement | null;
+  private groupTokensByDomainCheckbox: HTMLInputElement | null;
 
-  public domainFilters: string[] = [];
-  private onFiltersChanged: () => void;
+  public settings: Settings = {
+    groupByDomain: false,
+    domainFilters: [],
+  };
+  private onSettingsChanged: () => void;
 
-  constructor(onFiltersChanged: () => void) {
-    this.onFiltersChanged = onFiltersChanged;
+  constructor(onSettingsChanged: () => void) {
+    this.onSettingsChanged = onSettingsChanged;
 
     this.mainPage = document.getElementById("main-page");
     this.settingsPage = document.getElementById("settings-page");
@@ -22,6 +28,9 @@ export class SettingsManager {
     ) as HTMLInputElement | null;
     this.regexError = document.getElementById("regex-error");
     this.filterList = document.getElementById("filter-list");
+    this.groupTokensByDomainCheckbox = document.getElementById(
+      "group-by-domain-checkbox"
+    ) as HTMLInputElement | null;
 
     this.init();
   }
@@ -29,6 +38,10 @@ export class SettingsManager {
   private async init() {
     this.closeSettingsBtn?.addEventListener("click", () => this.hide());
     this.addFilterBtn?.addEventListener("click", () => this.addFilter());
+    this.groupTokensByDomainCheckbox?.addEventListener("change", () =>
+      this.handleGroupByDomainChange()
+    );
+
     await this.loadSettings();
   }
 
@@ -41,6 +54,23 @@ export class SettingsManager {
   public hide() {
     this.mainPage?.style.setProperty("display", "block");
     this.settingsPage?.style.setProperty("display", "none");
+  }
+
+  private async handleGroupByDomainChange() {
+    if (!this.groupTokensByDomainCheckbox) return;
+
+    this.settings.groupByDomain = this.groupTokensByDomainCheckbox.checked;
+    await this.saveSettings();
+    await this.clearTokens();
+    this.onSettingsChanged();
+  }
+
+  private async clearTokens(): Promise<void> {
+    return new Promise((resolve) => {
+      chrome.storage.local.set({ jwt_detector_data: { tokenGroups: [] } }, () => {
+        resolve();
+      });
+    });
   }
 
   private async addFilter() {
@@ -59,31 +89,32 @@ export class SettingsManager {
       return;
     }
 
-    if (!this.domainFilters.includes(newFilter)) {
-      this.domainFilters.push(newFilter);
-      await this.saveFilters();
+    if (!this.settings.domainFilters.includes(newFilter)) {
+      this.settings.domainFilters.push(newFilter);
+      await this.saveSettings();
       this.renderFilterList();
       this.domainFilterInput.value = "";
+      this.onSettingsChanged();
     }
   }
 
   private async removeFilter(index: number) {
-    this.domainFilters.splice(index, 1);
-    await this.saveFilters();
+    this.settings.domainFilters.splice(index, 1);
+    await this.saveSettings();
     this.renderFilterList();
-    this.onFiltersChanged();
+    this.onSettingsChanged();
   }
 
   private renderFilterList() {
     if (!this.filterList) return;
     this.filterList.innerHTML = "";
 
-    if (this.domainFilters.length === 0) {
+    if (this.settings.domainFilters.length === 0) {
       this.filterList.innerHTML = `<div style="text-align: center; padding: 8px; color: #6b7280;">No filters added.</div>`;
       return;
     }
 
-    this.domainFilters.forEach((filter, index) => {
+    this.settings.domainFilters.forEach((filter, index) => {
       const item = document.createElement("div");
       item.className = "filter-item";
       item.innerHTML = `
@@ -103,21 +134,24 @@ export class SettingsManager {
     });
   }
 
-  private async saveFilters(): Promise<void> {
+  private async saveSettings(): Promise<void> {
     return new Promise((resolve) => {
-      chrome.storage.local.set(
-        { jwt_domain_filters: this.domainFilters },
-        () => {
-          resolve();
-        }
-      );
+      chrome.storage.local.set({ jwt_settings: this.settings }, () => {
+        resolve();
+      });
     });
   }
 
-  private async loadSettings(): Promise<void> {
+  public async loadSettings(): Promise<void> {
     return new Promise((resolve) => {
-      chrome.storage.local.get(["jwt_domain_filters"], (result) => {
-        this.domainFilters = result.jwt_domain_filters || [];
+      chrome.storage.local.get(["jwt_settings"], (result) => {
+        if (result.jwt_settings) {
+          this.settings = { ...this.settings, ...result.jwt_settings };
+        }
+        // Update UI elements to reflect loaded settings
+        if (this.groupTokensByDomainCheckbox) {
+          this.groupTokensByDomainCheckbox.checked = this.settings.groupByDomain;
+        }
         resolve();
       });
     });

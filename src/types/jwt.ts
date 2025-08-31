@@ -45,3 +45,8 @@ export interface ExtensionStorage {
   maxTokenGroups?: number;
   retentionHours?: number;
 }
+
+export interface Settings {
+  groupByDomain: boolean;
+  domainFilters: string[];
+}

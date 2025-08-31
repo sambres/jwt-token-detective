@@ -32,6 +32,16 @@
         </div>
         <div class="settings-content">
           <div class="form-group">
+            <div class="setting-item-control">
+              <label for="group-by-domain-checkbox">Group tokens by domain</label>
+              <input type="checkbox" id="group-by-domain-checkbox" />
+            </div>
+            <p class="setting-note">
+              Note: Changing this will clear all captured tokens.
+            </p>
+          </div>
+          <hr/>
+          <div class="form-group">
             <label for="domain-filter-input">Add domain filter (regex)</label>
             <input type="text" id="domain-filter-input" placeholder="e.g., .*\.example\.com">
             <div id="regex-error" class="error-message" style="display: none;"></div>

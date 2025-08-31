@@ -293,8 +293,8 @@ body {
 }
 
 .save-btn {
-  padding: 8px 16px;
-  font-size: 14px;
+  padding: 6px 10px;
+  font-size: 12px;
   text-align: center;
   font-weight: 500;
 }
@@ -336,4 +336,35 @@ body {
 
 .remove-filter-btn:hover {
   color: #374151;
+}
+
+/* Added for settings alignment */
+.setting-item-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px; /* Space between checkbox and label */
+}
+
+.setting-item-control input[type="checkbox"] {
+  width: auto;
+  height: auto;
+  padding-right: 4px;
+}
+
+.setting-item-control label {
+  margin-bottom: 0; /* Override default margin */
+  font-weight: normal;
+}
+
+.setting-note {
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.settings-content hr {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 20px 0;
 }
