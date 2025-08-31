@@ -1,4 +1,5 @@
 import { ExtensionStorage, JWTTokenGroup, RequestInfo } from "../types/jwt";
+import { SettingsManager } from "./settings-manager";
 
 export class JWTPopup {
   private tokensContainer: HTMLElement | null;
@@ -6,6 +7,9 @@ export class JWTPopup {
   private loading: HTMLElement | null;
   private statsText: HTMLElement | null;
   private refreshBtn: HTMLElement | null;
+  private settingsBtn: HTMLElement | null;
+
+  private settingsManager: SettingsManager;
 
   constructor() {
     this.tokensContainer = document.getElementById("tokens-container");
@@ -13,12 +17,19 @@ export class JWTPopup {
     this.loading = document.getElementById("loading");
     this.statsText = document.getElementById("stats-text");
     this.refreshBtn = document.getElementById("refresh-btn");
+    this.settingsBtn = document.getElementById("settings-btn");
+
+    this.settingsManager = new SettingsManager(() => this.loadTokens());
 
     this.init();
   }
 
   async init() {
     this.refreshBtn?.addEventListener("click", () => this.loadTokens());
+    this.settingsBtn?.addEventListener("click", () =>
+      this.settingsManager.show()
+    );
+
     await this.loadTokens();
   }
 
@@ -26,7 +37,20 @@ export class JWTPopup {
     try {
       this.showLoading();
       const storage = await this.getStorage();
-      this.renderTokens(storage.tokenGroups || []);
+      const allTokenGroups = storage.tokenGroups || [];
+      let filteredTokenGroups = allTokenGroups;
+
+      if (this.settingsManager.domainFilters.length > 0) {
+        const regexes = this.settingsManager.domainFilters.map(
+          (f) => new RegExp(f, "i")
+        );
+        filteredTokenGroups = allTokenGroups.filter((group) => {
+          const domain = this.getDomain(group);
+          return domain && regexes.some((r) => r.test(domain));
+        });
+      }
+
+      this.renderTokens(filteredTokenGroups, allTokenGroups);
     } catch (error) {
       console.error("Error loading tokens:", error);
       this.showError();
@@ -72,6 +96,10 @@ export class JWTPopup {
                             this.parseDate(req.timestamp) || new Date(),
                         }))
                         .filter((req) => req && req.timestamp instanceof Date)
+                        .sort(
+                          (a, b) =>
+                            b.timestamp.getTime() - a.timestamp.getTime()
+                        )
                     : [],
                 };
               }),
@@ -109,23 +137,28 @@ export class JWTPopup {
     }
   }
 
-  renderTokens(tokenGroups: JWTTokenGroup[]) {
+  renderTokens(tokenGroups: JWTTokenGroup[], allTokenGroups: JWTTokenGroup[]) {
     this.hideLoading();
 
-    if (tokenGroups.length === 0) {
+    if (allTokenGroups.length === 0) {
       this.showEmptyState();
       return;
     }
 
     this.hideEmptyState();
-    const fragment = document.createDocumentFragment();
-
     if (!this.tokensContainer) {
       console.error("Tokens container not found");
       return;
     }
     this.tokensContainer.innerHTML = "";
 
+    if (tokenGroups.length === 0) {
+      this.tokensContainer.innerHTML = `<div class="empty-state" style="display: block;"><div class="icon">🧐</div><h3>No matching tokens</h3><p>Adjust your filter or make new requests.</p></div>`;
+      this.updateStats(tokenGroups, allTokenGroups);
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
     // Sort by last seen (most recent first)
     const sortedGroups = tokenGroups.sort(
       (a, b) => new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime()
@@ -137,7 +170,22 @@ export class JWTPopup {
     });
 
     this.tokensContainer.appendChild(fragment);
-    this.updateStats(tokenGroups);
+    this.updateStats(tokenGroups, allTokenGroups);
+  }
+
+  getDomain(group: JWTTokenGroup): string {
+    if (group.domain) {
+      return group.domain;
+    }
+    if (group.requests && group.requests.length > 0) {
+      const lastRequest = group.requests[0];
+      try {
+        return new URL(lastRequest.url).hostname;
+      } catch (e) {
+        return lastRequest.url;
+      }
+    }
+    return group.tokenId || "unknown";
   }
 
   createTokenElement(group: JWTTokenGroup): HTMLElement {
@@ -178,46 +226,28 @@ export class JWTPopup {
 
     // Safe token ID handling
     const tokenId = group.tokenId || "unknown";
-    let title: string;
-
-    if (group.domain) {
-      title = group.domain;
-    } else if (group.requests && group.requests.length > 0) {
-      const lastRequest = [...group.requests].sort(
-        (a, b) =>
-          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      )[0];
-      try {
-        title = new URL(lastRequest.url).hostname;
-      } catch (e) {
-        title = lastRequest.url;
-      }
-    } else {
-      title = tokenId;
-    }
+    const title = this.getDomain(group);
 
     element.innerHTML = `
-          <div class="token-header" data-token-id="${tokenId}">
-            <div class="token-info">
-              <div class="token-id">${title}</div>
-              <div class="token-status">
-                <span class="status-badge ${statusClass}">${statusText}</span>
-                <span class="expiry-date">Expires: ${expiryText}</span>
-              </div>
-            </div>
-            <div class="token-actions">
-              <button class="copy-btn" data-token="${
-                group.raw || ""
-              }">Copy</button>
-              <button class="toggle-btn" data-token-id="${tokenId}">
-                ▼
-              </button>
-            </div>
+      <div class="token-header" data-token-id="${tokenId}">
+        <div class="token-info">
+          <div class="token-id">${title}</div>
+          <div class="token-status">
+            <span class="status-badge ${statusClass}">${statusText}</span>
+            <span class="expiry-date">Expires: ${expiryText}</span>
           </div>
-          <div class="requests-list" id="requests-${tokenId}">
-            ${this.renderRequests(group.requests || [])}
-          </div>
-        `;
+        </div>
+        <div class="token-actions">
+          <button class="primary-btn copy-btn" data-token="${
+            group.raw || ""
+          }">Copy</button>
+          <button class="toggle-btn" data-token-id="${tokenId}">▼</button>
+        </div>
+      </div>
+      <div class="requests-list" id="requests-${tokenId}">
+        ${this.renderRequests(group.requests || [])}
+      </div>
+    `;
 
     // Add event listeners
     this.setupTokenEvents(element, group);
@@ -242,12 +272,14 @@ export class JWTPopup {
       .map(
         (request) => `
           <div class="request-item">
-            <span class="request-method ${request.method}">${
+            <div class="request-line">
+              <span class="request-method ${request.method}">${
           request.method
         }</span>
-            <span class="request-path">${
-              request.abbreviatedPath || request.url
-            }</span>
+              <span class="request-path">${
+                request.abbreviatedPath || request.url
+              }</span>
+            </div>
             <div class="request-time">${this.formatDateTime(
               request.timestamp
             )}</div>
@@ -373,15 +405,19 @@ export class JWTPopup {
     }
   }
 
-  updateStats(tokenGroups: JWTTokenGroup[]) {
-    const validTokens = tokenGroups.filter((g) => !g.isExpired).length;
-    const expiredTokens = tokenGroups.filter((g) => g.isExpired).length;
+  updateStats(tokenGroups: JWTTokenGroup[], allTokenGroups: JWTTokenGroup[]) {
+    const count = tokenGroups.length;
+    const totalCount = allTokenGroups.length;
+    const expiredCount = tokenGroups.filter((g) => g.isExpired).length;
 
-    let text = `${tokenGroups.length} token${
-      tokenGroups.length !== 1 ? "s" : ""
-    }`;
-    if (expiredTokens > 0) {
-      text += ` (${expiredTokens} expired)`;
+    let text = `${totalCount} token${totalCount !== 1 ? "s" : ""}`;
+
+    if (this.settingsManager.domainFilters.length > 0) {
+      text = `${count} of ${totalCount} tokens`;
+    }
+
+    if (expiredCount > 0) {
+      text += ` (${expiredCount} expired)`;
     }
 
     if (this.statsText) {
@@ -414,11 +450,11 @@ export class JWTPopup {
     this.hideLoading();
     if (this.tokensContainer) {
       this.tokensContainer.innerHTML = `
-          <div style="text-align: center; padding: 20px; color: #dc2626;">
-            <div style="font-size: 24px; margin-bottom: 8px;">⚠️</div>
-            <div>Error loading tokens</div>
-          </div>
-        `;
+        <div style="text-align: center; padding: 20px; color: #dc2626;">
+          <div style="font-size: 24px; margin-bottom: 8px;">⚠️</div>
+          <div>Error loading tokens</div>
+        </div>
+      `;
     }
   }
 }

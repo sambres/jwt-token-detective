@@ -11,22 +11,45 @@
     </div>
 
     <div class="content">
-      <div id="loading" class="loading">Loading tokens...</div>
+      <div id="main-page">
+        <div id="loading" class="loading">Loading tokens...</div>
 
-      <div id="empty-state" class="empty-state" style="display: none">
-        <div class="icon">🔒</div>
-        <h3>No JWT tokens detected</h3>
-        <p>Make some requests with Bearer tokens to see them here</p>
+        <div id="empty-state" class="empty-state" style="display: none">
+          <div class="icon">🔒</div>
+          <h3>No JWT tokens detected</h3>
+          <p>Make some requests with Bearer tokens to see them here</p>
+        </div>
+
+        <div id="tokens-container">
+          <!-- Token groups will be inserted here -->
+        </div>
       </div>
 
-      <div id="tokens-container">
-        <!-- Token groups will be inserted here -->
+      <div id="settings-page" style="display: none;">
+        <div class="settings-header">
+          <h3>Settings</h2>
+          <button id="close-settings-btn" class="close-btn">&times;</button>
+        </div>
+        <div class="settings-content">
+          <div class="form-group">
+            <label for="domain-filter-input">Add domain filter (regex)</label>
+            <input type="text" id="domain-filter-input" placeholder="e.g., .*\.example\.com">
+            <div id="regex-error" class="error-message" style="display: none;"></div>
+          </div>
+          <button id="add-filter-btn" class="primary-btn save-btn">Add Filter</button>
+        </div>
+        <div id="filter-list">
+            <!-- Filters will be dynamically added here -->
+        </div>
       </div>
     </div>
 
     <div class="stats">
       <span id="stats-text">0 tokens detected</span>
-      <button id="refresh-btn" class="refresh-btn">Refresh</button>
+      <div class="actions-group">
+        <button id="refresh-btn" class="refresh-btn">Refresh</button>
+        <button id="settings-btn" class="settings-btn">Settings</button>
+      </div>
     </div>
 
     <script type="module">
