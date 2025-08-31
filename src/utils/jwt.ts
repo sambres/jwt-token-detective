@@ -128,6 +128,16 @@ export class JWTUtils {
     }
   }
 
+  static getDomainFromUrl(url: string): string {
+    try {
+      const urlObject = new URL(url);
+      return urlObject.hostname;
+    } catch (error) {
+      console.error("Invalid URL:", url, error);
+      return url;
+    }
+  }
+
   /**
    * Create a JWTTokenGroup from a token and request info
    */
@@ -141,6 +151,7 @@ export class JWTUtils {
     const tokenId = await this.generateTokenId(token);
     const expiryDate = this.getExpiryDate(parsed.payload);
     const isExpired = this.isTokenExpired(parsed.payload);
+    const domain = this.getDomainFromUrl(requestInfo.url);
 
     return {
       tokenId,
@@ -154,6 +165,7 @@ export class JWTUtils {
       firstSeen: requestInfo.timestamp,
       lastSeen: requestInfo.timestamp,
       isValid: true,
+      domain,
     };
   }
 

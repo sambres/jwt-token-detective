@@ -37,6 +37,7 @@ export interface JWTTokenGroup {
   lastSeen: Date;
   isValid: boolean;
   parseError?: string;
+  domain: string;
 }
 
 export interface ExtensionStorage {

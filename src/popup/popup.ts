@@ -65,10 +65,13 @@ export class JWTPopup {
                   firstSeen: this.parseDate(group.firstSeen) || new Date(),
                   lastSeen: this.parseDate(group.lastSeen) || new Date(),
                   requests: Array.isArray(group.requests)
-                    ? group.requests.map((req) => ({
-                        ...req,
-                        timestamp: this.parseDate(req.timestamp) || new Date(),
-                      })).filter(req => req && req.timestamp instanceof Date)
+                    ? group.requests
+                        .map((req) => ({
+                          ...req,
+                          timestamp:
+                            this.parseDate(req.timestamp) || new Date(),
+                        }))
+                        .filter((req) => req && req.timestamp instanceof Date)
                     : [],
                 };
               }),
@@ -175,11 +178,28 @@ export class JWTPopup {
 
     // Safe token ID handling
     const tokenId = group.tokenId || "unknown";
+    let title: string;
+
+    if (group.domain) {
+      title = group.domain;
+    } else if (group.requests && group.requests.length > 0) {
+      const lastRequest = [...group.requests].sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      )[0];
+      try {
+        title = new URL(lastRequest.url).hostname;
+      } catch (e) {
+        title = lastRequest.url;
+      }
+    } else {
+      title = tokenId;
+    }
 
     element.innerHTML = `
           <div class="token-header" data-token-id="${tokenId}">
             <div class="token-info">
-              <div class="token-id">ID: ${tokenId}</div>
+              <div class="token-id">${title}</div>
               <div class="token-status">
                 <span class="status-badge ${statusClass}">${statusText}</span>
                 <span class="expiry-date">Expires: ${expiryText}</span>

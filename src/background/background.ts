@@ -92,6 +92,7 @@ class JWTDetectorBackground {
         const existingGroup = storage.tokenGroups[existingGroupIndex];
         existingGroup.requests.push(requestInfo);
         existingGroup.lastSeen = requestInfo.timestamp;
+        existingGroup.domain = JWTUtils.getDomainFromUrl(requestInfo.url);
 
         console.log("Updated existing group:", {
           tokenId,
