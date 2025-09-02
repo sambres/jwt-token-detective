@@ -337,3 +337,40 @@ body {
 .remove-filter-btn:hover {
   color: #374151;
 }
+
+#inspect-page {
+  padding: 8px;
+}
+
+.inspect-content h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+
+.inspect-content pre {
+  background: #e5e7eb;
+  border-radius: 4px;
+  padding: 12px;
+  font-family: "Monaco", "Menlo", monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.inspect-btn {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inspect-btn:hover {
+  background: #f3f4f6;
+}

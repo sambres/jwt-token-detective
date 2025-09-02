@@ -1,4 +1,5 @@
 import { ExtensionStorage, JWTTokenGroup, RequestInfo } from "../types/jwt";
+import { InspectManager } from "./inspect-manager";
 import { SettingsManager } from "./settings-manager";
 
 export class JWTPopup {
@@ -10,6 +11,7 @@ export class JWTPopup {
   private settingsBtn: HTMLElement | null;
 
   private settingsManager: SettingsManager;
+  private inspectManager: InspectManager;
 
   constructor() {
     this.tokensContainer = document.getElementById("tokens-container");
@@ -20,6 +22,7 @@ export class JWTPopup {
     this.settingsBtn = document.getElementById("settings-btn");
 
     this.settingsManager = new SettingsManager(() => this.loadTokens());
+    this.inspectManager = new InspectManager();
 
     this.init();
   }
@@ -205,6 +208,11 @@ export class JWTPopup {
           <button class="primary-btn copy-btn" data-token="${
             group.raw || ""
           }">Copy</button>
+          <button class="inspect-btn" title="Inspect Token">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+              <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+            </svg>
+          </button>
           <button class="toggle-btn" data-token-id="${tokenId}">▼</button>
         </div>
       </div>
@@ -271,6 +279,19 @@ export class JWTPopup {
       e.stopPropagation();
       this.copyToClipboard(group.raw, copyBtn);
     });
+
+    // Inspect button
+    const inspectBtn = element.querySelector(".inspect-btn") as HTMLElement;
+    if (inspectBtn) {
+      inspectBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.inspectManager.show(
+          group.raw,
+          group.tokenId,
+          this.getDomain(group)
+        );
+      });
+    }
 
     // Toggle requests
     const toggleBtn = element.querySelector(".toggle-btn");
