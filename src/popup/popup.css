@@ -278,10 +278,6 @@ body {
   padding: 0;
 }
 
-.settings-content .form-group {
-  margin-bottom: 16px;
-}
-
 .settings-content label {
   display: block;
   font-size: 12px;
@@ -296,6 +292,11 @@ body {
   border-radius: 4px;
   border: 1px solid #d1d5db;
   font-size: 14px;
+}
+
+#add-filter-btn,
+#add-cookie-filter-btn {
+  margin: 16px 0;
 }
 
 .save-btn {
@@ -331,7 +332,8 @@ body {
   margin-bottom: 0;
 }
 
-.remove-filter-btn {
+.remove-filter-btn,
+.remove-cookie-filter-btn {
   background: none;
   border: none;
   cursor: pointer;
@@ -340,8 +342,24 @@ body {
   line-height: 1;
 }
 
-.remove-filter-btn:hover {
+.remove-filter-btn:hover,
+.remove-cookie-filter-btn:hover {
   color: #374151;
+}
+
+.checkbox-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.checkbox-container label {
+  cursor: pointer;
+  flex-grow: 1;
+}
+
+.checkbox-input {
+  padding: 8px;
 }
 
 #inspect-page {

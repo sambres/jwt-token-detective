@@ -25,25 +25,77 @@
         </div>
       </div>
 
-      <div id="settings-page" style="display: none;">
+      <div id="settings-page" style="display: none">
         <div class="settings-header">
-          <h3>Settings</h2>
+          <h3>Settings</h3>
           <button id="close-settings-btn" class="close-btn">&times;</button>
         </div>
         <div class="settings-content">
           <div class="form-group">
             <label for="domain-filter-input">Add domain filter (regex)</label>
-            <input type="text" id="domain-filter-input" placeholder="e.g., .*\.example\.com">
-            <div id="regex-error" class="error-message" style="display: none;"></div>
+            <input
+              type="text"
+              id="domain-filter-input"
+              placeholder="e.g., .*\.example\.com"
+            />
+            <div
+              id="regex-error"
+              class="error-message"
+              style="display: none"
+            ></div>
           </div>
-          <button id="add-filter-btn" class="primary-btn save-btn">Add Filter</button>
+          <button id="add-filter-btn" class="primary-btn save-btn">
+            Add Filter
+          </button>
         </div>
         <div id="filter-list">
-            <!-- Filters will be dynamically added here -->
+          <!-- Filters will be dynamically added here -->
+        </div>
+
+        <hr
+          style="
+            margin: 20px 0;
+            border-color: #e5e7eb;
+            border-style: solid;
+            border-width: 1px 0 0 0;
+          "
+        />
+
+        <div class="settings-content">
+          <div class="form-group checkbox-container">
+            <label for="cookie-inspection-toggle">
+              Enable Cookie JWT Inspection
+            </label>
+            <div class="checkbox-input">
+              <input type="checkbox" id="cookie-inspection-toggle" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="cookie-filter-input">
+              Add cookie name filter (regex)
+            </label>
+            <input
+              type="text"
+              id="cookie-filter-input"
+              placeholder="e.g., auth_token_.*"
+            />
+            <div
+              id="cookie-regex-error"
+              class="error-message"
+              style="display: none"
+            ></div>
+          </div>
+          <button id="add-cookie-filter-btn" class="primary-btn save-btn">
+            Add Cookie Filter
+          </button>
+        </div>
+        <div id="cookie-filter-list">
+          <!-- Cookie filters will be dynamically added here -->
         </div>
       </div>
 
-      <div id="inspect-page" style="display: none;">
+      <div id="inspect-page" style="display: none">
         <div class="settings-header">
           <h3 id="inspect-title">Inspect Token</h3>
           <button id="close-inspect-btn" class="close-btn">&times;</button>

@@ -7,9 +7,56 @@ class JWTDetectorBackground {
   private static readonly RETENTION_HOURS = 2;
   private static readonly CLEAN_UP_INTERVAL_MINUTES = 15; // 15 minutes
 
+  private isCookieInspectionEnabled: boolean = false;
+  private cookieNameFilters: RegExp[] = [];
+
   constructor() {
+    this.loadSettings();
     this.setupWebRequestListener();
     this.setupStorageCleanup();
+
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === "local") {
+        this.handleSettingsChange(changes);
+      }
+    });
+  }
+
+  private handleSettingsChange(changes: { [key: string]: chrome.storage.StorageChange }) {
+    let settingsChanged = false;
+    if (changes.jwt_cookie_inspection_enabled) {
+      this.isCookieInspectionEnabled = changes.jwt_cookie_inspection_enabled.newValue;
+      settingsChanged = true;
+    }
+    if (changes.jwt_cookie_name_filters) {
+      this.cookieNameFilters = (changes.jwt_cookie_name_filters.newValue || []).map(
+        (pattern: string) => new RegExp(pattern, "i")
+      );
+      settingsChanged = true;
+    }
+
+    if (settingsChanged) {
+      console.log("JWT Detector settings updated", {
+        isCookieInspectionEnabled: this.isCookieInspectionEnabled,
+        cookieNameFilters: this.cookieNameFilters,
+      });
+    }
+  }
+
+  private async loadSettings() {
+    chrome.storage.local.get(
+      ["jwt_cookie_inspection_enabled", "jwt_cookie_name_filters"],
+      (result) => {
+        this.isCookieInspectionEnabled = result.jwt_cookie_inspection_enabled || false;
+        this.cookieNameFilters = (result.jwt_cookie_name_filters || []).map(
+          (pattern: string) => new RegExp(pattern, "i")
+        );
+        console.log("JWT Detector settings loaded", {
+          isCookieInspectionEnabled: this.isCookieInspectionEnabled,
+          cookieNameFilters: this.cookieNameFilters,
+        });
+      }
+    );
   }
 
   /**
@@ -49,20 +96,29 @@ class JWTDetectorBackground {
       }
 
       // 2. Look for JWTs in cookies
-      const cookieHeader = details.requestHeaders?.find(
-        (header) => header.name.toLowerCase() === "cookie"
-      );
+      if (this.isCookieInspectionEnabled) {
+        const cookieHeader = details.requestHeaders?.find(
+          (header) => header.name.toLowerCase() === "cookie"
+        );
 
-      if (cookieHeader?.value) {
-        const cookies = cookieHeader.value.split(";");
-        for (const cookie of cookies) {
-          const [name, ...valueParts] = cookie.trim().split("=");
-          if (name && valueParts.length > 0) {
-            const value = valueParts.join("=");
-            // Basic check for JWT format. Full validation is done later.
-            if (value.split(".").length === 3) {
-              if (!tokens.has(value)) {
-                tokens.set(value, { type: "cookie", name });
+        if (cookieHeader?.value) {
+          const cookies = cookieHeader.value.split(";");
+          for (const cookie of cookies) {
+            const [name, ...valueParts] = cookie.trim().split("=");
+            if (name && valueParts.length > 0) {
+              // Apply cookie name filters if they exist
+              if (this.cookieNameFilters.length > 0) {
+                if (!this.cookieNameFilters.some((r) => r.test(name))) {
+                  continue; // Skip if no filter matches
+                }
+              }
+
+              const value = valueParts.join("=");
+              // Basic check for JWT format. Full validation is done later.
+              if (value.split(".").length === 3) {
+                if (!tokens.has(value)) {
+                  tokens.set(value, { type: "cookie", name });
+                }
               }
             }
           }
