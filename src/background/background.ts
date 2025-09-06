@@ -1,5 +1,5 @@
 import { JWTUtils } from "@/utils/jwt";
-import { ExtensionStorage, JWTTokenGroup, RequestInfo } from "@/types/jwt";
+import { ExtensionStorage, JWTTokenGroup, RequestInfo, TokenSource } from "@/types/jwt";
 
 class JWTDetectorBackground {
   private static readonly STORAGE_KEY = "jwt_detector_data";
@@ -32,7 +32,7 @@ class JWTDetectorBackground {
     details: chrome.webRequest.WebRequestHeadersDetails
   ): Promise<void> {
     try {
-      const tokens = new Set<string>();
+      const tokens = new Map<string, TokenSource>();
 
       // 1. Look for Authorization header with Bearer token
       const authHeader = details.requestHeaders?.find(
@@ -42,7 +42,9 @@ class JWTDetectorBackground {
       if (authHeader?.value) {
         const bearerToken = JWTUtils.extractBearerToken(authHeader.value);
         if (bearerToken) {
-          tokens.add(bearerToken);
+          if (!tokens.has(bearerToken)) {
+            tokens.set(bearerToken, { type: "header" });
+          }
         }
       }
 
@@ -59,7 +61,9 @@ class JWTDetectorBackground {
             const value = valueParts.join("=");
             // Basic check for JWT format. Full validation is done later.
             if (value.split(".").length === 3) {
-              tokens.add(value);
+              if (!tokens.has(value)) {
+                tokens.set(value, { type: "cookie", name });
+              }
             }
           }
         }
@@ -79,8 +83,8 @@ class JWTDetectorBackground {
       };
 
       // Store each unique token
-      for (const token of tokens) {
-        await this.storeTokenData(token, requestInfo);
+      for (const [token, source] of tokens.entries()) {
+        await this.storeTokenData(token, requestInfo, source);
       }
     } catch (error) {
       console.error("Error handling request:", error);
@@ -92,7 +96,8 @@ class JWTDetectorBackground {
    */
   private async storeTokenData(
     token: string,
-    requestInfo: RequestInfo
+    requestInfo: RequestInfo,
+    source: TokenSource
   ): Promise<void> {
     try {
       const storage = await this.getStorage();
@@ -144,7 +149,7 @@ class JWTDetectorBackground {
         }
       } else {
         // Create new token group
-        const newGroup = await JWTUtils.createTokenGroup(token, requestInfo);
+        const newGroup = await JWTUtils.createTokenGroup(token, requestInfo, source);
         if (newGroup) {
           console.log("Created new token group:", {
             tokenId: newGroup.tokenId,

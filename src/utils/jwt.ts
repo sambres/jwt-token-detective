@@ -3,6 +3,7 @@ import type {
   JWTPayload,
   JWTTokenGroup,
   RequestInfo,
+  TokenSource,
 } from "@/types/jwt";
 
 export class JWTUtils {
@@ -143,7 +144,8 @@ export class JWTUtils {
    */
   static async createTokenGroup(
     token: string,
-    requestInfo: RequestInfo
+    requestInfo: RequestInfo,
+    source: TokenSource
   ): Promise<JWTTokenGroup | null> {
     const parsed = this.parseJWT(token);
     if (!parsed) return null;
@@ -166,6 +168,7 @@ export class JWTUtils {
       lastSeen: requestInfo.timestamp,
       isValid: true,
       domain,
+      source,
     };
   }
 

@@ -79,6 +79,12 @@ body {
   margin-bottom: 6px;
 }
 
+.token-source {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+
 .token-status {
   display: flex;
   align-items: center;

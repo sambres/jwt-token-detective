@@ -24,6 +24,15 @@ export interface RequestInfo {
   timestamp: number;
 }
 
+export type TokenSource =
+  | {
+      type: "header";
+    }
+  | {
+      type: "cookie";
+      name: string;
+    };
+
 export interface JWTTokenGroup {
   tokenId: string; // hash of the token for grouping
   raw: string; // the actual JWT token
@@ -38,6 +47,7 @@ export interface JWTTokenGroup {
   isValid: boolean;
   parseError?: string;
   domain: string;
+  source: TokenSource;
 }
 
 export interface ExtensionStorage {
