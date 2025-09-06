@@ -32,17 +32,44 @@ class JWTDetectorBackground {
     details: chrome.webRequest.WebRequestHeadersDetails
   ): Promise<void> {
     try {
-      // Look for Authorization header with Bearer token
+      const tokens = new Set<string>();
+
+      // 1. Look for Authorization header with Bearer token
       const authHeader = details.requestHeaders?.find(
         (header) => header.name.toLowerCase() === "authorization"
       );
 
-      if (!authHeader?.value) return;
+      if (authHeader?.value) {
+        const bearerToken = JWTUtils.extractBearerToken(authHeader.value);
+        if (bearerToken) {
+          tokens.add(bearerToken);
+        }
+      }
 
-      const bearerToken = JWTUtils.extractBearerToken(authHeader.value);
-      if (!bearerToken) return;
+      // 2. Look for JWTs in cookies
+      const cookieHeader = details.requestHeaders?.find(
+        (header) => header.name.toLowerCase() === "cookie"
+      );
 
-      // Create request info
+      if (cookieHeader?.value) {
+        const cookies = cookieHeader.value.split(";");
+        for (const cookie of cookies) {
+          const [name, ...valueParts] = cookie.trim().split("=");
+          if (name && valueParts.length > 0) {
+            const value = valueParts.join("=");
+            // Basic check for JWT format. Full validation is done later.
+            if (value.split(".").length === 3) {
+              tokens.add(value);
+            }
+          }
+        }
+      }
+
+      if (tokens.size === 0) {
+        return;
+      }
+
+      // Create request info for all found tokens in this request
       const requestInfo: RequestInfo = {
         id: JWTUtils.generateRequestId(),
         url: details.url,
@@ -51,7 +78,10 @@ class JWTDetectorBackground {
         timestamp: new Date().getTime(),
       };
 
-      await this.storeTokenData(bearerToken, requestInfo);
+      // Store each unique token
+      for (const token of tokens) {
+        await this.storeTokenData(token, requestInfo);
+      }
     } catch (error) {
       console.error("Error handling request:", error);
     }
